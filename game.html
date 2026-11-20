@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Starfield Defense</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 24px 16px;
+      background: #0b0d17;
+      color: #e8e8f0;
+      font-family: Georgia, "Times New Roman", serif;
+      text-align: center;
+    }
+    main {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.8rem;
+      font-weight: normal;
+    }
+    p {
+      margin: 4px 0 12px;
+      color: #a0a3b8;
+      font-size: 0.95rem;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      max-width: 600px;
+      height: auto;
+      margin: 0 auto;
+      background: #000000;
+      border: 1px solid #2a2e45;
+      touch-action: none;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    .controls button {
+      flex: 1;
+      padding: 16px 0;
+      font-size: 1.1rem;
+      background: #1c2036;
+      color: #e8e8f0;
+      border: 1px solid #3a3f60;
+      border-radius: 8px;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    a {
+      color: #8fb4ff;
+    }
+    .back {
+      display: inline-block;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Starfield Defense</h1>
+    <p>Arrow keys or A/D to move, Space to fire. On a phone, use the buttons.</p>
+    <canvas id="game" width="600" height="700"></canvas>
+    <div class="controls">
+      <button id="left" aria-label="Move left">◀</button>
+      <button id="fire" aria-label="Fire">Fire</button>
+      <button id="right" aria-label="Move right">▶</button>
+    </div>
+    <a class="back" href="./">← Back to homepage</a>
+  </main>
+
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const W = canvas.width, H = canvas.height;
+
+    const keys = { left: false, right: false, fire: false };
+    let state, lastTime = 0;
+
+    const stars = Array.from({ length: 70 }, () => ({
+      x: Math.random() * W, y: Math.random() * H, s: Math.random() * 1.5 + 0.5
+    }));
+
+    function newGame() {
+      state = { score: 0, lives: 3, wave: 1, over: false, won: false };
+      newWave();
+    }
+
+    function newWave() {
+      state.player = { x: W / 2, y: H - 50, w: 40, h: 18, cooldown: 0, hit: 0 };
+      state.shots = [];
+      state.bombs = [];
+      state.enemies = [];
+      const cols = 8, rows = 4;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          state.enemies.push({ x: 80 + c * 60, y: 80 + r * 50, w: 34, h: 24, row: r });
+        }
+      }
+      state.dir = 1;
+      state.speed = 30 + state.wave * 10;
+      state.won = false;
+    }
+
+    function update(dt) {
+      if (state.over || state.won) {
+        if (keys.fire) {
+          keys.fire = false;
+          if (state.over) newGame();
+          else { state.wave++; newWave(); }
+        }
+        return;
+      }
+      const p = state.player;
+      if (p.hit > 0) p.hit -= dt;
+      if (keys.left) p.x -= 300 * dt;
+      if (keys.right) p.x += 300 * dt;
+      p.x = Math.max(p.w / 2, Math.min(W - p.w / 2, p.x));
+
+      p.cooldown -= dt;
+      if (keys.fire && p.cooldown <= 0) {
+        state.shots.push({ x: p.x, y: p.y - p.h });
+        p.cooldown = 0.35;
+      }
+
+      state.shots.forEach(s => s.y -= 500 * dt);
+      state.shots = state.shots.filter(s => s.y > -10);
+
+      // Enemy movement: slide sideways, step down at the edges
+      const alive = state.enemies;
+      const speed = state.speed + (32 - alive.length) * 4;
+      let edge = false;
+      alive.forEach(e => {
+        e.x += state.dir * speed * dt;
+        if (e.x < 20 || e.x + e.w > W - 20) edge = true;
+      });
+      if (edge) {
+        state.dir *= -1;
+        alive.forEach(e => { e.x += state.dir * speed * dt; e.y += 20; });
+      }
+
+      // Enemies drop bombs
+      if (alive.length && Math.random() < dt * (0.8 + state.wave * 0.3)) {
+        const e = alive[Math.floor(Math.random() * alive.length)];
+        state.bombs.push({ x: e.x + e.w / 2, y: e.y + e.h });
+      }
+      state.bombs.forEach(b => b.y += 220 * dt);
+      state.bombs = state.bombs.filter(b => b.y < H + 10);
+
+      // Shots hit enemies
+      state.shots.forEach(s => {
+        for (let i = 0; i < alive.length; i++) {
+          const e = alive[i];
+          if (s.x > e.x && s.x < e.x + e.w && s.y > e.y && s.y < e.y + e.h) {
+            alive.splice(i, 1);
+            s.y = -100;
+            state.score += (4 - e.row) * 10;
+            break;
+          }
+        }
+      });
+
+      // Bombs hit player
+      state.bombs.forEach(b => {
+        if (p.hit <= 0 && Math.abs(b.x - p.x) < p.w / 2 && b.y > p.y - p.h && b.y < p.y + 4) {
+          b.y = H + 100;
+          state.lives--;
+          p.hit = 1.2;
+          if (state.lives <= 0) state.over = true;
+        }
+      });
+
+      // Enemies reach the bottom
+      if (alive.some(e => e.y + e.h >= p.y - p.h)) state.over = true;
+
+      if (!alive.length) state.won = true;
+    }
+
+    function drawEnemy(e) {
+      const colors = ["#ff6b9a", "#ffb84d", "#6be3ff", "#9dff6b"];
+      ctx.fillStyle = colors[e.row % colors.length];
+      const cx = e.x + e.w / 2, cy = e.y + e.h / 2;
+      // A simple diamond-shaped drone with two antennae
+      ctx.beginPath();
+      ctx.moveTo(cx, e.y + 4);
+      ctx.lineTo(e.x + e.w, cy);
+      ctx.lineTo(cx, e.y + e.h);
+      ctx.lineTo(e.x, cy);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillRect(cx - 9, e.y, 3, 7);
+      ctx.fillRect(cx + 6, e.y, 3, 7);
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(cx - 3, cy - 3, 6, 6);
+    }
+
+    function drawPlayer(p) {
+      if (p.hit > 0 && Math.floor(p.hit * 10) % 2 === 0) return;
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y - p.h);
+      ctx.lineTo(p.x + p.w / 2, p.y);
+      ctx.lineTo(p.x - p.w / 2, p.y);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    function draw() {
+      ctx.fillStyle = "#000000";
+      ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = "#555a7a";
+      stars.forEach(s => ctx.fillRect(s.x, s.y, s.s, s.s));
+
+      state.enemies.forEach(drawEnemy);
+      drawPlayer(state.player);
+
+      ctx.fillStyle = "#fff36b";
+      state.shots.forEach(s => ctx.fillRect(s.x - 2, s.y - 10, 4, 10));
+      ctx.fillStyle = "#ff5555";
+      state.bombs.forEach(b => ctx.fillRect(b.x - 2, b.y, 4, 10));
+
+      ctx.fillStyle = "#e8e8f0";
+      ctx.font = "20px Georgia, serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Score: " + state.score, 16, 32);
+      ctx.textAlign = "center";
+      ctx.fillText("Wave " + state.wave, W / 2, 32);
+      ctx.textAlign = "right";
+      ctx.fillText("Lives: " + state.lives, W - 16, 32);
+
+      if (state.over || state.won) {
+        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        ctx.fillRect(0, H / 2 - 70, W, 140);
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.font = "36px Georgia, serif";
+        ctx.fillText(state.over ? "Game over" : "Wave cleared!", W / 2, H / 2 - 10);
+        ctx.font = "20px Georgia, serif";
+        ctx.fillText(state.over ? "Press Space or Fire to play again" : "Press Space or Fire for the next wave", W / 2, H / 2 + 30);
+      }
+    }
+
+    function loop(t) {
+      const dt = Math.min((t - lastTime) / 1000, 0.05);
+      lastTime = t;
+      update(dt);
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Keyboard
+    const keyMap = { ArrowLeft: "left", KeyA: "left", ArrowRight: "right", KeyD: "right", Space: "fire" };
+    document.addEventListener("keydown", e => {
+      if (keyMap[e.code]) { keys[keyMap[e.code]] = true; e.preventDefault(); }
+    });
+    document.addEventListener("keyup", e => {
+      if (keyMap[e.code]) { keys[keyMap[e.code]] = false; e.preventDefault(); }
+    });
+
+    // Touch / mouse buttons
+    function hold(id, key) {
+      const el = document.getElementById(id);
+      const on = e => { e.preventDefault(); keys[key] = true; };
+      const off = e => { e.preventDefault(); keys[key] = false; };
+      el.addEventListener("pointerdown", on);
+      el.addEventListener("pointerup", off);
+      el.addEventListener("pointerleave", off);
+      el.addEventListener("pointercancel", off);
+    }
+    hold("left", "left");
+    hold("right", "right");
+    hold("fire", "fire");
+
+    newGame();
+    requestAnimationFrame(t => { lastTime = t; loop(t); });
+  </script>
+</body>
+</html>
