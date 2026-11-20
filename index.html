@@ -7,18 +7,82 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,900,100,0&display=swap">
+  <script>
+    // Apply a saved light/dark choice before the page draws
+    try {
+      var savedTheme = localStorage.getItem("theme");
+      if (savedTheme === "light" || savedTheme === "dark") {
+        document.documentElement.setAttribute("data-theme", savedTheme);
+      }
+    } catch (e) {}
+  </script>
   <style>
+    :root {
+      --bg: #ffffff;
+      --text: #1a1a1a;
+      --muted: #555555;
+      --date: #666666;
+      --rule: #dddddd;
+      --rule-soft: #eeeeee;
+      --link: #1a4d8f;
+      --alert: #c0392b;
+      --rainbow: linear-gradient(90deg, #e40303, #ff8c00, #e6b800, #008026, #004dff, #750787);
+      color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #121418;
+        --text: #e8e6e3;
+        --muted: #a8a6a2;
+        --date: #9a9894;
+        --rule: #3a3d44;
+        --rule-soft: #2a2d33;
+        --link: #8fb4ff;
+        --alert: #ff8a7a;
+        --rainbow: linear-gradient(90deg, #ff5a5a, #ffa53d, #ffd84d, #4cd97b, #5b9bff, #c27bff);
+        color-scheme: dark;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #121418;
+      --text: #e8e6e3;
+      --muted: #a8a6a2;
+      --date: #9a9894;
+      --rule: #3a3d44;
+      --rule-soft: #2a2d33;
+      --link: #8fb4ff;
+      --alert: #ff8a7a;
+      --rainbow: linear-gradient(90deg, #ff5a5a, #ffa53d, #ffd84d, #4cd97b, #5b9bff, #c27bff);
+      color-scheme: dark;
+    }
     body {
+      position: relative;
       margin: 0;
       padding: 48px 16px;
-      background: #ffffff;
-      color: #1a1a1a;
+      background: var(--bg);
+      color: var(--text);
       font-family: Georgia, "Times New Roman", serif;
       line-height: 1.6;
     }
     main {
       max-width: 720px;
       margin: 0 auto;
+    }
+    .theme-toggle {
+      position: absolute;
+      top: 12px;
+      right: 16px;
+      padding: 6px 12px;
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--rule);
+      border-radius: 999px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .theme-toggle:hover {
+      border-color: var(--muted);
     }
     h1 {
       margin: 0;
@@ -28,7 +92,7 @@
       font-weight: 900;
       font-variation-settings: "SOFT" 100, "WONK" 0, "opsz" 144;
       display: inline-block;
-      background: linear-gradient(90deg, #e40303, #ff8c00, #e6b800, #008026, #004dff, #750787);
+      background: var(--rainbow);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -37,12 +101,12 @@
     .beat {
       margin: 8px 0 0;
       font-size: 1.25rem;
-      color: #555555;
+      color: var(--muted);
     }
     h2 {
       margin: 48px 0 12px;
       padding-bottom: 6px;
-      border-bottom: 1px solid #dddddd;
+      border-bottom: 1px solid var(--rule);
       font-size: 1.1rem;
       font-weight: normal;
       letter-spacing: 0.08em;
@@ -51,18 +115,18 @@
     .placeholder {
       margin: 0;
       padding: 16px;
-      border: 2px dashed #c0392b;
-      color: #c0392b;
+      border: 2px dashed var(--alert);
+      color: var(--alert);
       font-family: Arial, Helvetica, sans-serif;
       font-size: 0.95rem;
     }
     a {
-      color: #1a4d8f;
+      color: var(--link);
     }
     .footer {
       margin-top: 48px;
       padding-top: 16px;
-      border-top: 1px solid #dddddd;
+      border-top: 1px solid var(--rule);
       font-size: 0.9rem;
     }
     .clips {
@@ -72,7 +136,7 @@
     }
     .clips li {
       padding: 12px 0;
-      border-bottom: 1px solid #eeeeee;
+      border-bottom: 1px solid var(--rule-soft);
     }
     .clips a {
       font-size: 1.1rem;
@@ -84,12 +148,13 @@
     .clips .date {
       display: block;
       margin-top: 2px;
-      color: #666666;
+      color: var(--date);
       font-size: 0.9rem;
     }
   </style>
 </head>
 <body>
+  <button class="theme-toggle" id="theme-toggle" type="button">Dark mode</button>
   <main>
     <header>
       <h1>Kyle Chouinard</h1>
@@ -139,5 +204,30 @@
       <a href="game.html">Play Starfield Defense</a>
     </footer>
   </main>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var button = document.getElementById("theme-toggle");
+      var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
+
+      function currentTheme() {
+        return root.getAttribute("data-theme") || (systemDark.matches ? "dark" : "light");
+      }
+      function updateButton() {
+        var dark = currentTheme() === "dark";
+        button.textContent = dark ? "Light mode" : "Dark mode";
+        button.setAttribute("aria-pressed", dark ? "true" : "false");
+      }
+
+      button.addEventListener("click", function () {
+        var next = currentTheme() === "dark" ? "light" : "dark";
+        root.setAttribute("data-theme", next);
+        try { localStorage.setItem("theme", next); } catch (e) {}
+        updateButton();
+      });
+      systemDark.addEventListener("change", updateButton);
+      updateButton();
+    })();
+  </script>
 </body>
 </html>
