@@ -11,7 +11,7 @@
     // Apply a saved light/dark choice before the page draws
     try {
       var savedTheme = localStorage.getItem("theme");
-      if (savedTheme === "light" || savedTheme === "dark") {
+      if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "photo") {
         document.documentElement.setAttribute("data-theme", savedTheme);
       }
     } catch (e) {}
@@ -54,6 +54,24 @@
       --alert: #ff8a7a;
       --rainbow: linear-gradient(90deg, #ff5a5a, #ffa53d, #ffd84d, #4cd97b, #5b9bff, #c27bff);
       color-scheme: dark;
+    }
+    :root[data-theme="photo"] {
+      --bg: #f2f0ed;
+      --rule: #cfcac4;
+      color-scheme: light;
+    }
+    :root[data-theme="photo"] body {
+      background: var(--bg) url("images/kyle.jpg") center / cover fixed no-repeat;
+      min-height: 100vh;
+      box-sizing: border-box;
+    }
+    :root[data-theme="photo"] main {
+      padding: 24px;
+      background: rgba(255, 255, 255, 0.88);
+      border-radius: 12px;
+    }
+    :root[data-theme="photo"] .theme-toggle {
+      background: rgba(255, 255, 255, 0.88);
     }
     body {
       position: relative;
@@ -210,17 +228,23 @@
       var button = document.getElementById("theme-toggle");
       var systemDark = window.matchMedia("(prefers-color-scheme: dark)");
 
+      var order = ["light", "dark", "photo"];
+      var labels = { light: "Light mode", dark: "Dark mode", photo: "Photo mode" };
+
       function currentTheme() {
         return root.getAttribute("data-theme") || (systemDark.matches ? "dark" : "light");
       }
+      function nextTheme() {
+        return order[(order.indexOf(currentTheme()) + 1) % order.length];
+      }
       function updateButton() {
-        var dark = currentTheme() === "dark";
-        button.textContent = dark ? "Light mode" : "Dark mode";
-        button.setAttribute("aria-pressed", dark ? "true" : "false");
+        var next = nextTheme();
+        button.textContent = labels[next];
+        button.setAttribute("aria-label", "Switch to " + labels[next].toLowerCase());
       }
 
       button.addEventListener("click", function () {
-        var next = currentTheme() === "dark" ? "light" : "dark";
+        var next = nextTheme();
         root.setAttribute("data-theme", next);
         try { localStorage.setItem("theme", next); } catch (e) {}
         updateButton();
