@@ -13,9 +13,10 @@ Each clip needs:
 
 - **Headline**: exactly as Kyle gives it.
 - **Link**: the full URL to the story.
+- **Publication name**: exactly as Kyle gives it (for example, `Las Vegas Sun`).
 - **Date**: exactly as Kyle gives it. Existing clips use the format `November 12, 2026 11:23 a.m.`, but don't reformat what Kyle sends.
 
-If Kyle gives a link without a headline or date, ask for what's missing. Don't open the link to fill it in, and don't guess. If he wants it posted anyway, put `[Date to come]` or `[Headline to come]` in that spot and tell him.
+If Kyle gives a link without a headline, publication name or date, ask for what's missing. Don't open the link to fill it in, and don't guess. If he wants it posted anyway, put `[Date to come]`, `[Headline to come]` or `[Publication to come]` in that spot and tell him.
 
 Kyle's message may be a Markdown link like `[Headline](https://...)`. The text in the brackets is the headline, and the part in parentheses is the link.
 
@@ -25,7 +26,7 @@ Unless Kyle says where it goes, add the new clip as the **first** item in the li
 
 ```html
         <li>
-          <a href="LINK">HEADLINE</a>
+          <a href="LINK">HEADLINE</a> — PUBLICATION
           <span class="date">DATE</span>
         </li>
 ```
