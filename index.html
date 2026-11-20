@@ -20,6 +20,15 @@
       margin: 0;
       font-size: 2.5rem;
       font-weight: normal;
+      display: inline-block;
+      animation: spin 6s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      h1 { animation: none; }
     }
   </style>
 </head>
